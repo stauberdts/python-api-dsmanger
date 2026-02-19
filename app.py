@@ -13,7 +13,7 @@ def reset_client(serial_number: str):
 
          # IP-Adresse des Clients prüfen
         client_ip = request.remote_addr
-        allowed_ips = ["192.168.1.1","185.237.66.107"]  # IP-Adresse, die erlaubt ist
+        allowed_ips = ["192.168.1.185","185.237.66.107"]  # IP-Adresse, die erlaubt ist
         if client_ip not in allowed_ips:
             return jsonify({
                 "message": "Zugriff nicht erlaubt."
@@ -54,14 +54,14 @@ def change_brand(serial_number: str, vehicle_brand: str):
             r"C:\Program Files (x86)\DimSport\DSManager\DSMANAGER.EXE"
         )
         app_ui = Application(backend="uia").connect(
-            title="DS Manager - 2.0.9.15", timeout=10
+            title="DS Manager - 2.0.9.16", timeout=10
         )
 
-        dlg = app_ui.window(title="DS Manager - 2.0.9.15")
+        dlg = app_ui.window(title="DS Manager - 2.0.9.16")
         dlg.child_window(title="My Genius Manager", control_type="Button").click_input()
         time.sleep(5)
 
-        dlg2 = app_ui.window(title="DS Manager - MyGenius Manager - 2.0.9.15")
+        dlg2 = app_ui.window(title="DS Manager - MyGenius Manager - 2.0.9.16")
         dlg2.wait("visible", timeout=10)
 
         dlg2.child_window(
@@ -150,7 +150,7 @@ def changebrand_handler():
     try:
           # IP-Adresse des Clients prüfen
         client_ip = request.remote_addr
-        allowed_ips = ["192.168.1.1","185.237.66.107"]  # IP-Adresse, die erlaubt ist
+        allowed_ips = ["192.168.1.1","192.168.1.185","185.237.66.107"]  # IP-Adresse, die erlaubt ist
         if client_ip not in allowed_ips:
             return jsonify({
                 "message": "Zugriff nicht erlaubt."
