@@ -2,7 +2,8 @@ from pywinauto import Application
 from pywinauto import Desktop
 from flask import Flask, request, jsonify
 import time
-import uiautomation as auto
+import threading
+#import uiautomation as auto
 
 
 app = Flask(__name__)
@@ -27,26 +28,72 @@ def reset_client(serial_number: str):
         )
         app_ui = Application(backend="uia").connect(
             title="DS Manager - 2.0.9.16", timeout=100)
-        
+  
+
         dlg = app_ui.window(title="DS Manager - 2.0.9.16")
         dlg.child_window(title="My Genius Manager", control_type="Button").click_input()
         time.sleep(5)
+ 
 
         dlg2 = app_ui.window(title="DS Manager - MyGenius Manager - 2.0.9.16")
-        dlg2.menu_select("File->Reset Client…")
-        time.sleep(5)
+        #dlg2.print_control_identifiers()   
+        #dlg2.menu_select("Datei->Reset Client…")
+
+        menu_bar = dlg2.child_window(
+        auto_id="mnsPrincipale",
+        control_type="MenuBar"
+)
+
+        #menu_bar.wait("visible", timeout=10)
+
+        datei = menu_bar.child_window(
+            title="Datei",
+            control_type="MenuItem"
+)
+
+        datei.invoke()
+
+        def open_reset():
+            reset = dlg2.child_window(title="Reset Client…", control_type="MenuItem")
+            reset.wait("exists", timeout=10)
+            reset.invoke()
+
+        threading.Thread(target=open_reset, daemon=True).start()   
+
+        time.sleep(10)
+
+        #reset_dlg = Desktop(backend="uia").window(title="DS Manager - MyGenius Manager - Client zurücksetzen")
+        #reset_dlg.wait("visible", timeout=20)
+
+        #reset_dlg = app_ui.window(title_re="*Client zurücksetzen*")
+        #reset_dlg.wait("visible", timeout=20)
+        #print("Menü")
+        windows = Desktop(backend="uia").windows()
+
+        for w in windows:
+            print("TITLE:", repr(w.window_text()))
+            print("CONTROL TYPE:", w.element_info.control_type)
+            print("CLASS:", w.element_info.class_name)
+            print("-" * 50)
+
+
+        print("Menü")
+
+
+        return {"status": 200, "message": "Erfolgreich abgeschlossen"}
+      
 
     # Setze globalen Timeout, damit WaitForExist stabil ist
-        auto.SetGlobalSearchTimeout(15)
+        #auto.SetGlobalSearchTimeout(15)
 
         # Top-Level Popup greifen
-        popup = auto.WindowControl(Name='DS Manager - MyGenius Manager - Reset Client')
+        #popup = auto.WindowControl(Name='DS Manager - MyGenius Manager - Reset Client')
 
         # Warten bis das Popup existiert und sichtbar ist
-        popup.WaitForExist(timeout=15)
-        popup.SetFocus()  # Fokus auf das Popup setzen
+        #popup.WaitForExist(timeout=15)
+        #popup.SetFocus()  # Fokus auf das Popup setzen
 
-        print("Popup gefunden!")
+        #print("Popup gefunden!")
 
 
         #dlg3 = app_ui.window(title_re="DS Manager - MyGenius Manager - Reset Client")
@@ -56,13 +103,17 @@ def reset_client(serial_number: str):
         #dlg3.print_control_identifiers()    
         #print("AP UI")
 
-        return {"status": 200, "message": "Erfolgreich abgeschlossen"}
+     
 
      except Exception as e:
         # Jede Exception abfangen und als Fehler zurückgeben
         print(e)
         return {"status": 501, "message": str(e)}
         #return {"status": 200, "message": "Server Fehler"}
+
+def open_reset():
+    reset = dlg2.child_window(title="Reset Client…", control_type="MenuItem")
+    reset.invoke()  # darf blockieren – aber nur im Thread
 
 
 def change_brand(serial_number: str, vehicle_brand: str):
