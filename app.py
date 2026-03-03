@@ -1,6 +1,8 @@
 from pywinauto import Application
+from pywinauto import Desktop
 from flask import Flask, request, jsonify
 import time
+import uiautomation as auto
 
 
 app = Flask(__name__)
@@ -13,36 +15,53 @@ def reset_client(serial_number: str):
 
          # IP-Adresse des Clients prüfen
         client_ip = request.remote_addr
-        allowed_ips = ["192.168.1.185","185.237.66.107"]  # IP-Adresse, die erlaubt ist
+        allowed_ips = ["192.168.1.185","185.237.66.107","127.0.0.1"]  # IP-Adresse, die erlaubt ist
         if client_ip not in allowed_ips:
-            return jsonify({
+            return {
+                "status": 403,
                 "message": "Zugriff nicht erlaubt."
-            }), 403
+                }
             
         app_ui = Application(backend="uia").start(
             r"C:\Program Files (x86)\DimSport\DSManager\DSMANAGER.EXE"
         )
         app_ui = Application(backend="uia").connect(
-            title="DS Manager - 2.0.9.15", timeout=100)
+            title="DS Manager - 2.0.9.16", timeout=100)
         
-        dlg = app_ui.window(title="DS Manager - 2.0.9.15")
+        dlg = app_ui.window(title="DS Manager - 2.0.9.16")
         dlg.child_window(title="My Genius Manager", control_type="Button").click_input()
         time.sleep(5)
 
-        dlg2 = app_ui.window(title="DS Manager - MyGenius Manager - 2.0.9.15")
-        dlg2.menu_select("Datei->Reset Client…")
+        dlg2 = app_ui.window(title="DS Manager - MyGenius Manager - 2.0.9.16")
+        dlg2.menu_select("File->Reset Client…")
         time.sleep(5)
 
-        dlg3 = app_ui.window(title="DS Manager - MyGenius Manager - Client zurücksetzen")
-        dlg3.wait("visible", timeout=10)
-        dlg3.print_control_identifiers()    
-        
+    # Setze globalen Timeout, damit WaitForExist stabil ist
+        auto.SetGlobalSearchTimeout(15)
+
+        # Top-Level Popup greifen
+        popup = auto.WindowControl(Name='DS Manager - MyGenius Manager - Reset Client')
+
+        # Warten bis das Popup existiert und sichtbar ist
+        popup.WaitForExist(timeout=15)
+        popup.SetFocus()  # Fokus auf das Popup setzen
+
+        print("Popup gefunden!")
+
+
+        #dlg3 = app_ui.window(title_re="DS Manager - MyGenius Manager - Reset Client")
+        #dlg3 = Application(backend="uia").window(title="DS Manager - MyGenius Manager - Reset Client")
+        #print("AP UI")
+        #dlg3.wait("visible", timeout=15)
+        #dlg3.print_control_identifiers()    
+        #print("AP UI")
+
         return {"status": 200, "message": "Erfolgreich abgeschlossen"}
 
      except Exception as e:
         # Jede Exception abfangen und als Fehler zurückgeben
         print(e)
-        return {"status": 200, "message": str(e)}
+        return {"status": 501, "message": str(e)}
         #return {"status": 200, "message": "Server Fehler"}
 
 
@@ -112,7 +131,8 @@ def change_brand(serial_number: str, vehicle_brand: str):
     except Exception as e:
         # Jede Exception abfangen und als Fehler zurückgeben
         print (e)
-        return {"status": 200, "message": "Server Fehler"}
+        return {"status": 505, "message": "Server Fehler"}
+
 
 
 #Route für Changebrand RESET
@@ -121,11 +141,12 @@ def reset_client_handler():
     try:   
          # IP-Adresse des Clients prüfen
         client_ip = request.remote_addr
-        allowed_ips = ["192.168.1.1","185.237.66.107"]  # IP-Adresse, die erlaubt ist
+        allowed_ips = ["192.168.1.1","185.237.66.107","127.0.0.1"]  # IP-Adresse, die erlaubt ist
         if client_ip not in allowed_ips:
-            return jsonify({
-                "message": "Zugriff nicht erlaubt."
-            }), 403
+           return {
+            "status": 403,
+            "message": "Zugriff nicht erlaubt."
+            }
         
           # JSON aus dem Request-Body lesen
         data = request.get_json(force=True)
@@ -140,9 +161,10 @@ def reset_client_handler():
        
     except Exception as e:
         # Alle unerwarteten Fehler abfangen
-        return jsonify({
-            "message": str(e)
-        }), 500    
+       return {
+        "status": 500,
+        "message": str(e)
+        }    
 
 #Route für Changebrand POST
 @app.route("/myg/changebrand/", methods=["POST"])
