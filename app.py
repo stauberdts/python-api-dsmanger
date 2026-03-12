@@ -10,26 +10,18 @@ app = Flask(__name__)
 def reset_client(serial_number: str):  
       
      try:
-
-         # IP-Adresse des Clients prüfen
-        client_ip = request.remote_addr
-        allowed_ips = ["192.168.1.185","185.237.66.107"]  # IP-Adresse, die erlaubt ist
-        if client_ip not in allowed_ips:
-            return jsonify({
-                "message": "Zugriff nicht erlaubt."
-            }), 403
-            
+           
         app_ui = Application(backend="uia").start(
             r"C:\Program Files (x86)\DimSport\DSManager\DSMANAGER.EXE"
         )
         app_ui = Application(backend="uia").connect(
-            title="DS Manager - 2.0.9.15", timeout=100)
+            title="DS Manager - 2.0.9.16", timeout=100)
         
-        dlg = app_ui.window(title="DS Manager - 2.0.9.15")
+        dlg = app_ui.window(title_re="DS Manager - .*")
         dlg.child_window(title="My Genius Manager", control_type="Button").click_input()
         time.sleep(5)
 
-        dlg2 = app_ui.window(title="DS Manager - MyGenius Manager - 2.0.9.15")
+        dlg2 = app_ui.window(title_re="DS Manager - MyGenius Manager - .*")
         dlg2.menu_select("Datei->Reset Client…")
         time.sleep(5)
 
@@ -57,11 +49,11 @@ def change_brand(serial_number: str, vehicle_brand: str):
             title="DS Manager - 2.0.9.16", timeout=10
         )
 
-        dlg = app_ui.window(title="DS Manager - 2.0.9.16")
+        dlg = app_ui.window(title_re="DS Manager - .*")
         dlg.child_window(title="My Genius Manager", control_type="Button").click_input()
         time.sleep(5)
 
-        dlg2 = app_ui.window(title="DS Manager - MyGenius Manager - 2.0.9.16")
+        dlg2 = app_ui.window(title_re="DS Manager - MyGenius Manager - .*")
         dlg2.wait("visible", timeout=10)
 
         dlg2.child_window(
@@ -80,7 +72,7 @@ def change_brand(serial_number: str, vehicle_brand: str):
         # Jede Exception abfangen und als Fehler zurückgeben
             time.sleep(3)
             app_ui.kill()
-            return {"status": 200, "message": "Seriennummer nicht gefunden oder Marke nicht bekannt"}
+            return {"status": 400, "message": "Seriennummer nicht gefunden oder Marke nicht bekannt"}
 
 
         btn = dlg2.child_window(auto_id="btnUploadABLRemote", control_type="Button")
@@ -101,7 +93,7 @@ def change_brand(serial_number: str, vehicle_brand: str):
         # Jede Exception abfangen und als Fehler zurückgeben
             time.sleep(3)
             app_ui.kill()
-            return {"status": 200, "message": "Keine kostenlose Freigabe möglich"}
+            return {"status": 400, "message": "Keine kostenlose Freigabe möglich"}
         
 
         time.sleep(3)
@@ -112,24 +104,48 @@ def change_brand(serial_number: str, vehicle_brand: str):
     except Exception as e:
         # Jede Exception abfangen und als Fehler zurückgeben
         print (e)
-        return {"status": 200, "message": "Server Fehler"}
+        return {"status": 500, "message": "Server Fehler"}
 
+
+class RequestValidator:
+    def __init__(self, allowed_ips=None):
+        if allowed_ips is None:
+            allowed_ips = [
+                "192.168.1.1",
+                "192.168.1.185",
+                "185.237.66.107",
+                "127.0.0.1"
+            ]
+        self.allowed_ips = allowed_ips
+
+    def check_ip(self):
+        client_ip = request.remote_addr
+
+        if client_ip not in self.allowed_ips:
+           return {
+                "status": 403,
+                "message": "Zugriff nicht erlaubt."
+            }
+
+        return None
+
+    def get_json(self):
+        data = request.get_json(force=True)
+        print(data)
+        return data
 
 #Route für Changebrand RESET
 @app.route("/myg/reset-client/", methods=["POST"])
 def reset_client_handler():
     try:   
-         # IP-Adresse des Clients prüfen
-        client_ip = request.remote_addr
-        allowed_ips = ["192.168.1.1","185.237.66.107"]  # IP-Adresse, die erlaubt ist
-        if client_ip not in allowed_ips:
-            return jsonify({
-                "message": "Zugriff nicht erlaubt."
-            }), 403
-        
-          # JSON aus dem Request-Body lesen
-        data = request.get_json(force=True)
-        print (data)
+        validator = RequestValidator()
+
+        ip_check = validator.check_ip()
+        if ip_check:
+            return ip_check
+
+        data = validator.get_json()
+      
 
         # Felder abrufen
         mygSerialNumber = data.get("serialNumber")
@@ -148,18 +164,15 @@ def reset_client_handler():
 @app.route("/myg/changebrand/", methods=["POST"])
 def changebrand_handler():
     try:
-          # IP-Adresse des Clients prüfen
-        client_ip = request.remote_addr
-        allowed_ips = ["192.168.1.1","192.168.1.185","185.237.66.107"]  # IP-Adresse, die erlaubt ist
-        if client_ip not in allowed_ips:
-            return jsonify({
-                "message": "Zugriff nicht erlaubt."
-            }), 403
+        validator = RequestValidator()
 
+        ip_check = validator.check_ip()
+        if ip_check:
+            return ip_check
 
-        # JSON aus dem Request-Body lesen
-        data = request.get_json(force=True)
-        print (data)
+        data = validator.get_json()
+
+       
 
         # Felder abrufen
         mygSerialNumber = data.get("serialNumber")
